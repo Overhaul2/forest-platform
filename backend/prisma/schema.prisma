@@ -1,0 +1,330 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  RESEARCHER
+  USER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Kingdom {
+  id      String @id @default(uuid())
+  gbifKey Int?   @unique
+
+  name String @unique
+
+  phyla Phylum[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Phylum {
+  id   String @id @default(uuid())
+  gbifKey Int?   @unique
+
+  name String @unique
+
+  kingdomId String
+  kingdom   Kingdom @relation(fields: [kingdomId], references: [id], onDelete: Cascade)
+
+  classes TaxonomicClass[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaxonomicClass {
+  id      String @id @default(uuid())
+  gbifKey Int?   @unique
+
+  name String @unique
+
+  phylumId String
+  phylum   Phylum @relation(fields: [phylumId], references: [id], onDelete: Cascade)
+
+  orders TaxonomicOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaxonomicOrder {
+  id      String @id @default(uuid())
+  gbifKey Int?   @unique
+
+  name String @unique
+
+  classId        String
+  taxonomicClass TaxonomicClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  families Family[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Family {
+  id      String @id @default(uuid())
+  gbifKey Int?   @unique
+
+  name String @unique
+
+  orderId String
+  order   TaxonomicOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  genera Genus[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Genus {
+  id      String @id @default(uuid())
+  gbifKey Int?   @unique
+
+  name String @unique
+
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  species Species[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Species {
+  id String @id @default(uuid())
+
+  gbifId     Int?    @unique
+  wikidataId String? @unique
+
+  scientificName   String  @unique
+  canonicalName    String?
+  scientificAuthor String?
+  rank             String?
+
+  description String?
+
+  heightMin Float?
+  heightMax Float?
+
+  diameterMin Float?
+  diameterMax Float?
+
+  woodDensity Float?
+
+  distribution String?
+
+  floweringPeriod String?
+  fruitingPeriod  String?
+
+  genusId String
+  genus   Genus  @relation(fields: [genusId], references: [id], onDelete: Cascade)
+
+  isSynced        Boolean          @default(true)
+  lastSyncAt      DateTime?
+  gbifDataset     String?
+  
+  vernacularNames VernacularName[]
+  synonyms        Synonym[]
+  images          Image[]
+  habitats        SpeciesHabitat[]
+  uses            SpeciesUse[]
+  occurrences     Occurrence[]
+  references      Reference[]
+  recogfGroups    SpeciesRecogf[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VernacularName {
+  id String @id @default(uuid())
+
+  language String
+  country  String?
+  name     String
+
+  source      String?  @default("GBIF")
+
+  speciesId String
+  species   Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@unique([speciesId, language, name])
+}
+
+model Synonym {
+  id String @id @default(uuid())
+
+  name String
+
+  speciesId String
+  species   Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+}
+
+model Image {
+  id String @id @default(uuid())
+
+  gbifIdentifier String @unique
+
+  url String?
+
+  type String?
+
+  format String?
+
+  title String?
+
+  creator String?
+
+  publisher String?
+
+  license String?
+
+  rightsHolder String?
+
+  references String?
+
+  source String? @default("GBIF")
+
+  copyright String?
+
+  speciesId String
+  species Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Habitat {
+  id String @id @default(uuid())
+
+  name        String  @unique
+  description String?
+
+  species SpeciesHabitat[]
+}
+
+model SpeciesHabitat {
+  speciesId String
+  habitatId String
+
+  species Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+  habitat Habitat @relation(fields: [habitatId], references: [id], onDelete: Cascade)
+
+  @@id([speciesId, habitatId])
+}
+
+model Use {
+  id String @id @default(uuid())
+
+  name        String  @unique
+  description String?
+
+  species SpeciesUse[]
+}
+
+model SpeciesUse {
+  speciesId String
+  useId     String
+
+  species Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+  use     Use     @relation(fields: [useId], references: [id], onDelete: Cascade)
+
+  @@id([speciesId, useId])
+}
+
+model Country {
+  id String @id @default(uuid())
+
+  code String @unique
+  name String @unique
+
+  occurrences Occurrence[]
+}
+
+model Occurrence {
+  id String @id @default(uuid())
+
+  gbifOccurrenceId Int?
+
+  latitude  Float?
+  longitude Float?
+
+  locality String?
+
+  observedAt DateTime?
+
+  speciesId String
+  species   Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  countryId String?
+  country   Country? @relation(fields: [countryId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Reference {
+  id String @id @default(uuid())
+
+  title String
+
+  url String?
+
+  source String?
+
+  speciesId String
+
+  species Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+}
+
+model RecogfGroup {
+  id String @id @default(uuid())
+
+  code String @unique
+
+  name String
+
+  description String?
+
+  species SpeciesRecogf[]
+}
+
+model SpeciesRecogf {
+  speciesId String
+  recogfId  String
+
+  species Species     @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+  recogf  RecogfGroup @relation(fields: [recogfId], references: [id], onDelete: Cascade)
+
+  @@id([speciesId, recogfId])
+}
