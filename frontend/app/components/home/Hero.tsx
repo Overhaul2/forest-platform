@@ -304,7 +304,7 @@ const isSearching = search.isPending === true;
                 {/* Résultats */}
                 {!suggestions.isLoading &&
                   !suggestions.isError &&
-                  suggestions.data?.length > 0 && (
+                  (suggestions.data?.length??0) > 0 && (
                     <div className="py-2">
 
                       {suggestions.data?.map((species) => {
